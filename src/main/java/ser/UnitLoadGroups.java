@@ -25,12 +25,9 @@ import static com.fasterxml.jackson.databind.type.LogicalType.Collection;
 
 public class UnitLoadGroups extends UnifiedAgent {
     Logger log = LogManager.getLogger(this.getClass().getName());
-    ISession ses;
-    IDocumentServer srv;
-    IBpmService bpm;
-
-    IGroup[] grps;
-    private ProcessHelper helper;
+    public static ISession ses;
+    public static IDocumentServer srv;
+    public static IBpmService bpm;
     @Override
     protected Object execute() {
         if (getEventFolder() == null) {
@@ -43,106 +40,7 @@ public class UnitLoadGroups extends UnifiedAgent {
         _info("Started");
 
         try{
-            IFolder folder = getEventFolder();
-
-            String name = "";
-            if(hasDescriptor(folder, "ObjectName")){
-                String nam1 = folder.getDescriptorValue("ObjectName", String.class);
-                name = (nam1 == null || nam1.isBlank() ? name : nam1.trim());
-            }
-            if(name.isBlank()){throw new Exception("Unit-name not found.");}
-
-            List<String> groupCatgs = new ArrayList<>();
-
-            List<String> owners = new ArrayList<>();
-            if(hasDescriptor(folder, "AbacOwner")){
-                String own1 = folder.getDescriptorValue("AbacOwner", String.class);
-                owners = (own1 == null || own1.isEmpty() ? owners : Arrays.asList(own1));
-                groupCatgs.add("Owner");
-            }
-            List<String> dccs = new ArrayList<>();
-            if(hasDescriptor(folder, "ccmPrjCard_DccList")){
-                List<String> dcs1 = folder.getDescriptorValues("ccmPrjCard_DccList", String.class);
-                dccs = (dcs1 == null || dcs1.isEmpty() ? dccs : dcs1);
-                groupCatgs.add("DCC");
-            }
-
-            List<String> moderators = new ArrayList<>();
-            if(hasDescriptor(folder, "confidentialityModorate")){
-                List<String> mds1 = folder.getDescriptorValues("confidentialityModorate", String.class);
-                moderators = (mds1 == null || mds1.isEmpty() ? moderators : mds1);
-                groupCatgs.add("Moderate");
-            }
-
-            List<String> highs = new ArrayList<>();
-            if(hasDescriptor(folder, "confidentialityHigh")){
-                List<String> hgs1 = folder.getDescriptorValues("confidentialityHigh", String.class);
-                highs = (hgs1 == null || hgs1.isEmpty() ? highs : hgs1);
-                groupCatgs.add("High");
-            }
-
-            List<String> highests = new ArrayList<>();
-            if(hasDescriptor(folder, "confidentialityVeryHigh")){
-                List<String> hst1 = folder.getDescriptorValues("confidentialityVeryHigh", String.class);
-                highests = (hst1 == null || hst1.isEmpty() ? highests : hst1);
-                groupCatgs.add("Highest");
-            }
-
-            ISerClassFactory classFactory = getDocumentServer().getClassFactory();
-            for(String grpCatg : groupCatgs){
-                String groupName = name + "_" + grpCatg;
-                IGroup group = srv.getGroupByName(ses, groupName);
-                if(group != null){
-                    srv.deleteGroup(ses, group);
-                }
-
-                group = classFactory.createGroupInstance(ses, groupName);
-                group.commit();
-
-                List<String> members = new ArrayList<>();
-                if(grpCatg.equals("Owner")){
-                    members = owners;
-                }
-                if(grpCatg.equals("DCC")){
-                    members = dccs;
-                }
-                if(grpCatg.equals("Moderate")){
-                    members = Stream.of(moderators, highs, highests)
-                            .flatMap(java.util.Collection::stream).collect(Collectors.toList());
-                }
-                if(grpCatg.equals("High")){
-                    members = Stream.of(highs, highests)
-                            .flatMap(java.util.Collection::stream).collect(Collectors.toList());
-                }
-                if(grpCatg.equals("Highest")){
-                    members = highests;
-                }
-
-                for(String memberId : members){
-                    IUser musr = srv.getUser(ses, memberId);
-                    if(musr != null){
-                        IUser xusr = musr.getModifiableCopy(ses);
-                        xusr.setGroupIDs(ArrayUtils.add(musr.getGroupIDs(), group.getID()));
-                        xusr.commit();
-                        continue;
-                    }
-                    IRole mrol = srv.getRoleByName(ses, memberId);
-                    if(mrol != null){
-                        IRole xrol = mrol.getModifiableCopy(ses);
-                        xrol.setGroupIDs(ArrayUtils.add(mrol.getGroupIDs(), group.getID()));
-                        xrol.commit();
-                        continue;
-                    }
-                    IUnit munt = srv.getUnitByName(ses, memberId);
-                    if(munt != null){
-                        IUnit xunt = munt.getModifiableCopy(ses);
-                        xunt.setGroupIDs(ArrayUtils.add(munt.getGroupIDs(), group.getID()));
-                        xunt.commit();
-                        continue;
-                    }
-                }
-            }
-
+            update(getEventFolder());
             _info("Tested.");
 
         } catch (Exception e) {
@@ -156,7 +54,107 @@ public class UnitLoadGroups extends UnifiedAgent {
         _info("Finished");
         return resultSuccess("Ended successfully");
     }
-    public boolean hasDescriptor(IInformationObject object, String descName){
+    public static void update(IInformationObject folder) throws Exception {
+
+        String name = "";
+        if(hasDescriptor(folder, "ObjectName")){
+            String nam1 = folder.getDescriptorValue("ObjectName", String.class);
+            name = (nam1 == null || nam1.isBlank() ? name : nam1.trim());
+        }
+        if(name.isBlank()){throw new Exception("Unit-name not found.");}
+
+        List<String> groupCatgs = new ArrayList<>();
+
+        List<String> owners = new ArrayList<>();
+        if(hasDescriptor(folder, "AbacOwner")){
+            String own1 = folder.getDescriptorValue("AbacOwner", String.class);
+            owners = (own1 == null || own1.isEmpty() ? owners : Arrays.asList(own1));
+            groupCatgs.add("Owner");
+        }
+        List<String> dccs = new ArrayList<>();
+        if(hasDescriptor(folder, "ccmPrjCard_DccList")){
+            List<String> dcs1 = folder.getDescriptorValues("ccmPrjCard_DccList", String.class);
+            dccs = (dcs1 == null || dcs1.isEmpty() ? dccs : dcs1);
+            groupCatgs.add("DCC");
+        }
+
+        List<String> moderators = new ArrayList<>();
+        if(hasDescriptor(folder, "confidentialityModorate")){
+            List<String> mds1 = folder.getDescriptorValues("confidentialityModorate", String.class);
+            moderators = (mds1 == null || mds1.isEmpty() ? moderators : mds1);
+            groupCatgs.add("Moderate");
+        }
+
+        List<String> highs = new ArrayList<>();
+        if(hasDescriptor(folder, "confidentialityHigh")){
+            List<String> hgs1 = folder.getDescriptorValues("confidentialityHigh", String.class);
+            highs = (hgs1 == null || hgs1.isEmpty() ? highs : hgs1);
+            groupCatgs.add("High");
+        }
+
+        List<String> highests = new ArrayList<>();
+        if(hasDescriptor(folder, "confidentialityVeryHigh")){
+            List<String> hst1 = folder.getDescriptorValues("confidentialityVeryHigh", String.class);
+            highests = (hst1 == null || hst1.isEmpty() ? highests : hst1);
+            groupCatgs.add("Highest");
+        }
+
+        ISerClassFactory classFactory = srv.getClassFactory();
+        for(String grpCatg : groupCatgs){
+            String groupName = name + "_" + grpCatg;
+            IGroup group = srv.getGroupByName(ses, groupName);
+            if(group != null){
+                srv.deleteGroup(ses, group);
+            }
+
+            group = classFactory.createGroupInstance(ses, groupName);
+            group.commit();
+
+            List<String> members = new ArrayList<>();
+            if(grpCatg.equals("Owner")){
+                members = owners;
+            }
+            if(grpCatg.equals("DCC")){
+                members = dccs;
+            }
+            if(grpCatg.equals("Moderate")){
+                members = Stream.of(moderators, highs, highests)
+                        .flatMap(java.util.Collection::stream).collect(Collectors.toList());
+            }
+            if(grpCatg.equals("High")){
+                members = Stream.of(highs, highests)
+                        .flatMap(java.util.Collection::stream).collect(Collectors.toList());
+            }
+            if(grpCatg.equals("Highest")){
+                members = highests;
+            }
+
+            for(String memberId : members){
+                IUser musr = srv.getUser(ses, memberId);
+                if(musr != null){
+                    IUser xusr = musr.getModifiableCopy(ses);
+                    xusr.setGroupIDs(ArrayUtils.add(musr.getGroupIDs(), group.getID()));
+                    xusr.commit();
+                    continue;
+                }
+                IRole mrol = srv.getRoleByName(ses, memberId);
+                if(mrol != null){
+                    IRole xrol = mrol.getModifiableCopy(ses);
+                    xrol.setGroupIDs(ArrayUtils.add(mrol.getGroupIDs(), group.getID()));
+                    xrol.commit();
+                    continue;
+                }
+                IUnit munt = srv.getUnitByName(ses, memberId);
+                if(munt != null){
+                    IUnit xunt = munt.getModifiableCopy(ses);
+                    xunt.setGroupIDs(ArrayUtils.add(munt.getGroupIDs(), group.getID()));
+                    xunt.commit();
+                    continue;
+                }
+            }
+        }
+    }
+    public static boolean hasDescriptor(IInformationObject object, String descName){
         IDescriptor[] descs = srv.getDescriptorByName(descName, ses);
         List<String> checkList = new ArrayList<>();
         for(IDescriptor ddsc : descs){
