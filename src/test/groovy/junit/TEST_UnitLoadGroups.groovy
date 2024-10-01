@@ -23,7 +23,7 @@ class TEST_UnitLoadGroups {
     void testForAgentResult() {
         def agent = new UnitLoadGroups();
 
-        binding["AGENT_EVENT_OBJECT_CLIENT_ID"] = "SR04BPWS24b61b3dbb-7021-40e6-ae51-362c0ea0a50b182024-09-26T09:25:14.488Z011"
+        binding["AGENT_EVENT_OBJECT_CLIENT_ID"] = "SR04BPWS244b2c678a-47ab-4eff-b9b9-a4767742b5db182024-10-01T08:12:27.778Z011"
 
         def result = (AgentExecutionResult) agent.execute(binding.variables)
         assert result.resultCode == 0

@@ -56,6 +56,14 @@ public class UnitLoadGroups extends UnifiedAgent {
     }
     public static void update(IInformationObject folder) throws Exception {
 
+        String type = "";
+        if(hasDescriptor(folder, "Type")){
+            String typ1 = folder.getDescriptorValue("Type", String.class);
+            type = (typ1 == null || typ1.isBlank() ? type : typ1.trim());
+        }
+        if(!type.equals("Unit")){return;}
+
+
         String name = "";
         if(hasDescriptor(folder, "ObjectName")){
             String nam1 = folder.getDescriptorValue("ObjectName", String.class);
